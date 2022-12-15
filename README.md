@@ -6,23 +6,31 @@
 
 ## Logging Level Control
 
-Let's look at how to control the logging level of our logging framework, which
+Let's look at how to configure the logging level of our logging framework, which
 controls whether a call to the corresponding method will actually result in an
-output. For example:
+output.
 
-> `logger.info()` will output a message if and only if "logging level <= INFO".
+Consider the log levels again from the previous lesson:
 
-Look at the mapping in the previous section to figure out the rule for every
-logger method.
+1. TRACE
+2. DEBUG
+3. INFO
+4. WARN
+5. ERROR
 
-SLF4J can be configured through our `application.properties` file - add the
-following line:
+Remember, the higher the logging level, the less information it should output.
+Therefore, ERROR will _only_ show error messages whereas TRACE will show the
+most detailed output.
+
+We can configure the logging level that we want shown in the
+`application.properties` file. Let's add the following line in our
+spring-rest-demo project:
 
 ```properties
 logging.level.root=WARN
 ```
 
-Restart the application and observe that your output will look something like
+Restart the application and observe that the output will look something like
 this:
 
 ```java
@@ -40,18 +48,11 @@ OpenJDK 64-Bit Server VM warning: Options -Xverify:none and -noverify were depre
 
 Where has all the rest of the output gone?
 
-Remember our logging rule from before:
-
-> `logger.info()` will output a message if and only if "logging level <= INFO"
-
-Since we're using the `info()` method in our code, and we have now configured
-the logging level to be `WARN`, we will only see output for the `WARN` or
-`ERROR` levels.
-
-Furthermore, if you go back to your output before we changed the log levels, you
-will see that most of the output associated with the Spring Framework itself is
-also output at level `INFO` and therefore will not be visible when the log level
-is higher.
+Since we set the logging level to WARN, we will only see output for the WARN or
+ERROR leveled log statements. If we go back to the output before we changed the
+log levels, we will see that most of the output associated with the Spring
+Framework itself has the level `INFO`; therefore, it will not be visible when
+the log level is higher.
 
 Let's now go from a very terse output to a very verbose output - let's change
 the log level to `TRACE`:
@@ -60,84 +61,83 @@ the log level to `TRACE`:
 logging.level.root=TRACE
 ```
 
-Restart your application and look at everything the Spring Framework now tells
-you about everything single little it's doing. The output on my workstation went
-from the 10 lines I showed above to over 4,000 lines of output!
+Restart the application and look at everything the Spring Framework now tells
+us about everything single process it's doing. The output on the workstation
+went from the 10 lines to over 4,000 lines of output!
 
-This can be useful when you are trying to trace a particular call or debug a
-specific issue, but is way too much information under normal circumstances.
+This can be useful when we are trying to trace a particular call or debug a
+specific issue, but this is usually too much information under normal
+circumstances.
 
-The logging level we've been configured is obviously one way to control what our
-application outputs, but so far we've been using a pretty blunt instrument.
-That's because we have been using the `root` logging level, which impacts every
-single class that runs under our application, including the Spring Framework
-itself. That's why changing that `root` level to `TRACE` produced such a massive
-output.
+So far in this lesson, we've been configuring the logging level at `root`,
+which impacts every single class that runs under our application, including the
+Spring Framework itself. This is why when we changed the `root` level to TRACE,
+it produced a massive log.
 
 Let's set the `root` logging level back to `INFO` and set the logging level for
 our application to `TRACE`:
 
 ```properties
 logging.level.root=INFO
-logging.level.com.flatiron.spring=TRACE
+logging.level.com.example.springrestdemo=TRACE
 ```
 
-As you can see, we can specify a package name after `logging.level` and the
+As we can see, we can specify a package name after `logging.level` and the
 logging level will be set as indicated for any `Logger` instances associated
 with a class that is anywhere in that package (even sub-packages).
 
-Let's add a few logging statements to our controller in order to see the impact
+Let's add a few logging statements to our service in order to see the impact
 of this change:
 
 ```java
-package com.flatiron.spring.FlatironSpring;
+package com.example.springrestdemo.service;
 
+import com.example.springrestdemo.dto.JokeDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-@RestController
-public class HelloController {
+@Service
+public class JokeService {
 
-    private JokeService jokeService;
+    private static final String JOKE_URI = "https://icanhazdadjoke.com/";
+    private final RestTemplate restTemplate;
+    private final Logger logger = LoggerFactory.getLogger(JokeService.class);
 
-    Logger logger = LoggerFactory.getLogger(HelloController.class);
-
-    public HelloController(JokeService jokeService) {
-        this.jokeService = jokeService;
+    @Autowired
+    public JokeService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
-    @GetMapping("/api/hello")
-    public String hello(@RequestParam(name = "targetName", defaultValue = "Stephanie") String name) {
-        logger.trace("Entering hello()");
-        String greeting = "Hello " + name;
-        greeting += "<br/>";
-        logger.trace("Fetching joke of the moment");
-        greeting += "Dad joke of the moment: " + jokeService.getDadJoke();
-        logger.trace("Returning greeting from hello()");
-        return greeting;
+    public JokeDTO getJoke() {
+        logger.info("Using logger: Retrieving the joke from the external source");
+        System.out.println("Using System.out: Retrieving the joke from the external source");
+        return restTemplate.getForObject(JOKE_URI, JokeDTO.class);
     }
-
-    @GetMapping("/api/status")
-    public String status() {
-        return "Congratulations - you must be an admin since you can see the application's status information";
-    }
-
 }
 ```
 
 Here are a few lines from the corresponding output:
 
-```java
-2022-07-10 02:01:08.030  INFO 25594 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2022-07-10 02:01:08.030  INFO 25594 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2022-07-10 02:01:08.031  INFO 25594 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
-2022-07-10 02:01:09.562 TRACE 25594 --- [nio-8080-exec-4] c.f.s.FlatironSpring.HelloController     : Entering hello()
-2022-07-10 02:01:09.562 TRACE 25594 --- [nio-8080-exec-4] c.f.s.FlatironSpring.HelloController     : Fetching joke of the moment
-2022-07-10 02:01:09.844 TRACE 25594 --- [nio-8080-exec-4] c.f.s.FlatironSpring.HelloController     : Returning greeting from hello()
+```text
+2022-12-15 14:18:45.327  INFO 7230 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2022-12-15 14:18:45.328  INFO 7230 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2022-12-15 14:18:45.328  INFO 7230 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2022-12-15 14:18:45.403 TRACE 7230 --- [nio-8080-exec-1] c.e.springrestdemo.service.JokeService    : Entering in the getJoke() method
+2022-12-15 14:18:45.890 TRACE 7230 --- [nio-8080-exec-1] c.e.springrestdemo.service.JokeService    : Retrieved joke from external source. Returning the DTO
 ```
 
 As you can see, we no longer have all the `trace()` output from the Spring
-Framework itself, but we do have them from our controller class.
+Framework itself, but we do have them from our service class.
+
+## Summary
+
+We can configure the log levels of what is printed out to the log through the
+`application.properties` file. We can change the log level at the root level,
+which includes logs regarding the Spring Framework itself, or we can change the
+log level at the application level.
+
+## References
+
+- [Spring Logging Documentation](https://docs.spring.io/spring-boot/docs/2.1.18.RELEASE/reference/html/boot-features-logging.html)
