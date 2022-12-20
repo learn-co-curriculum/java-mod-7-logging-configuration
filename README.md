@@ -93,17 +93,16 @@ of this change:
 package com.example.springrestdemo.service;
 
 import com.example.springrestdemo.dto.JokeDTO;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Service
+@Slf4j
 public class JokeService {
 
     private static final String JOKE_URI = "https://icanhazdadjoke.com/";
     private final RestTemplate restTemplate;
-    private final Logger logger = LoggerFactory.getLogger(JokeService.class);
 
     @Autowired
     public JokeService(RestTemplate restTemplate) {
@@ -111,7 +110,7 @@ public class JokeService {
     }
 
     public JokeDTO getJoke() {
-        logger.info("Using logger: Retrieving the joke from the external source");
+        log.info("Using logger: Retrieving the joke from the external source");
         System.out.println("Using System.out: Retrieving the joke from the external source");
         return restTemplate.getForObject(JOKE_URI, JokeDTO.class);
     }
