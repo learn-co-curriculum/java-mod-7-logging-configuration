@@ -110,9 +110,10 @@ public class JokeService {
     }
 
     public JokeDTO getJoke() {
-        log.info("Using logger: Retrieving the joke from the external source");
-        System.out.println("Using System.out: Retrieving the joke from the external source");
-        return restTemplate.getForObject(JOKE_URI, JokeDTO.class);
+        log.trace("Entering in the getJoke() method");
+        JokeDTO joke = restTemplate.getForObject(JOKE_URI, JokeDTO.class);
+        log.trace("Retrieved joke from external source. Returning the DTO");
+        return joke;
     }
 }
 ```
